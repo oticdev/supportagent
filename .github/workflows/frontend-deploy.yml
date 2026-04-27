@@ -25,7 +25,7 @@ jobs:
 
     env:
       GCP_REGION: us-central1
-      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_PROJECT_ID: voiceagentproject-494309
       ENVIRONMENT: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'dev' || github.ref_name == 'staging' && 'staging' || 'dev') }}
 
     defaults:

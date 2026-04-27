@@ -1,0 +1,11 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - --build-arg
+      - VITE_API_URL=https://relaypay-dev-api-2jyaqpkqda-uc.a.run.app
+      - -t
+      - us-central1-docker.pkg.dev/voiceagentproject-494309/relaypay-dev-images/frontend:latest
+      - .
+images:
+  - 'us-central1-docker.pkg.dev/voiceagentproject-494309/relaypay-dev-images/frontend:latest'

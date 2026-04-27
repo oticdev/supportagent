@@ -156,3 +156,24 @@ resource "google_service_account_iam_member" "github_wi" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repo}"
 }
+
+# Allow frontend deploy SA to push images to Artifact Registry
+resource "google_project_iam_member" "github_deploy_ar" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
+# Allow frontend deploy SA to update Cloud Run service
+resource "google_project_iam_member" "github_deploy_run" {
+  project = var.project_id
+  role    = "roles/run.developer"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}
+
+# Allow frontend deploy SA to act as Cloud Run's service account
+resource "google_project_iam_member" "github_deploy_sa_act_as" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.github_deploy.email}"
+}

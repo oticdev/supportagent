@@ -19,8 +19,20 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["agent*", "ingest*", "routers*"]
+include = ["agent*", "ingest*", "routers*", "evals*"]
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.27.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

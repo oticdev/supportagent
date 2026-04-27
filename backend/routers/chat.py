@@ -53,6 +53,7 @@ async def chat(request: Request, req: ChatRequest):
         transcript=req.message,
         response=result["response"],
         route=result["route"],
+        user_email=req.user_email or None,
     )
 
     return {

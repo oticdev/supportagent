@@ -15,14 +15,18 @@ export type ChatResponse = {
 }
 
 export type AdminLog = {
-  id: number
   session_id: string
   mode: string
-  transcript: string
-  response: string
-  route: string | null
+  user_email: string | null
+  user_name: string | null
+  turns: number
+  first_message: string
   escalated: boolean
-  created_at: string
+  escalation_category: string | null
+  escalation_reason: string | null
+  appointment_time: string | null
+  started_at: string
+  last_activity: string
 }
 
 export type AdminLogsResponse = {
@@ -92,10 +96,10 @@ export async function getAdminLogs(
   creds: AdminCredentials,
   page = 1,
   pageSize = 20,
-  route?: string
+  escalatedOnly = false
 ): Promise<AdminLogsResponse> {
   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) })
-  if (route) params.set("route", route)
+  if (escalatedOnly) params.set("escalated_only", "true")
   const res = await fetch(`${BASE}/api/admin/logs?${params}`, { headers: adminHeaders(creds) })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
@@ -117,4 +121,86 @@ export async function triggerReingest(
   })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
+}
+
+// ── Evaluation ────────────────────────────────────────────────────────────────
+
+export type EvalCaseResult = {
+  case_id: string
+  query: string
+  actual_route: string
+  expected_route: string
+  route_correct: boolean
+  constraints_passed: boolean
+  constraint_failures: string[]
+  scores: {
+    accuracy: number
+    helpfulness: number
+    tone: number
+    safety: number
+    overall: number
+  }
+  reasoning: string
+  passed: boolean
+}
+
+export type EvalRun = {
+  id: string
+  total: number
+  passed: number
+  failed: number
+  pass_rate: number
+  route_accuracy: number
+  avg_scores: {
+    accuracy: number
+    helpfulness: number
+    tone: number
+    safety: number
+    overall: number
+  }
+  tags: string[] | null
+  created_at: string
+  results?: EvalCaseResult[]
+}
+
+export async function triggerEval(creds: AdminCredentials): Promise<{ status: string; scope: string }> {
+  const res = await fetch(`${BASE}/api/admin/eval/run`, {
+    method: "POST",
+    headers: adminHeaders(creds),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function getLatestEvalRun(creds: AdminCredentials): Promise<EvalRun | null> {
+  const res = await fetch(`${BASE}/api/admin/eval/runs/latest`, { headers: adminHeaders(creds) })
+  if (!res.ok) throw new Error(await res.text())
+  const data = await res.json()
+  if (data.status === "never_run") return null
+  return {
+    ...data,
+    avg_scores: {
+      accuracy: data.avg_accuracy,
+      helpfulness: data.avg_helpfulness,
+      tone: data.avg_tone,
+      safety: data.avg_safety,
+      overall: data.avg_overall,
+    },
+  }
+}
+
+export async function getEvalRuns(creds: AdminCredentials): Promise<EvalRun[]> {
+  const res = await fetch(`${BASE}/api/admin/eval/runs`, { headers: adminHeaders(creds) })
+  if (!res.ok) throw new Error(await res.text())
+  const data = await res.json()
+  return (data.runs ?? []).map((r: any) => ({
+    ...r,
+    avg_scores: {
+      accuracy: r.avg_accuracy,
+      helpfulness: r.avg_helpfulness,
+      tone: r.avg_tone,
+      safety: r.avg_safety,
+      overall: r.avg_overall,
+    },
+  }))
 }

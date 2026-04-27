@@ -61,8 +61,14 @@ async def init_db():
                 response    TEXT,
                 route       TEXT,
                 escalated   BOOLEAN DEFAULT FALSE,
+                user_email  TEXT,
                 created_at  TIMESTAMPTZ DEFAULT NOW()
             )
+        """)
+
+        # Migration: add user_email to existing deployments
+        await conn.execute("""
+            ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user_email TEXT
         """)
 
         await conn.execute("""
@@ -95,6 +101,25 @@ async def init_db():
                 appointment_time TIMESTAMPTZ,
                 calendar_event_id TEXT,
                 status           TEXT DEFAULT 'open',
+                created_at       TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS eval_runs (
+                id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                total            INT NOT NULL,
+                passed           INT NOT NULL,
+                failed           INT NOT NULL,
+                pass_rate        FLOAT NOT NULL,
+                route_accuracy   FLOAT NOT NULL,
+                avg_accuracy     FLOAT NOT NULL,
+                avg_helpfulness  FLOAT NOT NULL,
+                avg_tone         FLOAT NOT NULL,
+                avg_safety       FLOAT NOT NULL,
+                avg_overall      FLOAT NOT NULL,
+                tags             TEXT[] DEFAULT '{}',
+                results          JSONB NOT NULL DEFAULT '[]',
                 created_at       TIMESTAMPTZ DEFAULT NOW()
             )
         """)
@@ -137,15 +162,22 @@ async def delete_session(session_id: str) -> None:
         )
 
 
-async def log_conversation(session_id: str, mode: str, transcript: str, response: str, route: str):
+async def log_conversation(
+    session_id: str,
+    mode: str,
+    transcript: str,
+    response: str,
+    route: str,
+    user_email: str | None = None,
+):
     pool = await get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO conversations (session_id, mode, transcript, response, route, escalated)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO conversations (session_id, mode, transcript, response, route, escalated, user_email)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             """,
-            session_id, mode, transcript, response, route, route == "ESCALATE",
+            session_id, mode, transcript, response, route, route == "ESCALATE", user_email,
         )
 
 

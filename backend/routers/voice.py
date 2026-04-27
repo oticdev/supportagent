@@ -53,7 +53,15 @@ async def create_voice_session(request: Request, req: VoiceSessionRequest = Voic
                 "Authorization": f"Bearer {config.OPENAI_API_KEY}",
                 "Content-Type": "application/json",
             },
-            json={"model": REALTIME_MODEL, "voice": config.TTS_VOICE},
+            json={
+                "model": REALTIME_MODEL,
+                "voice": config.TTS_VOICE,
+                "instructions": instructions,
+                "input_audio_transcription": {
+                    "model": "whisper-1",
+                    "language": "en",
+                },
+            },
             timeout=15,
         )
         resp.raise_for_status()

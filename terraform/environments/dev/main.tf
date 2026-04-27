@@ -44,7 +44,7 @@ module "backend" {
   cpu           = "1"
   memory        = "512Mi"
 
-  allowed_origins = "https://dev.${var.base_domain}"
+  allowed_origins = "https://relaypay-dev-frontend-845745374775.us-central1.run.app,http://localhost:5173,http://localhost:4173"
   support_email   = var.support_email
   admin_username  = "admin"
 

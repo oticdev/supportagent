@@ -3,7 +3,7 @@ steps:
     args:
       - build
       - --build-arg
-      - VITE_API_URL=https://relaypay-dev-api-2jyaqpkqda-uc.a.run.app
+      - VITE_API_URL=https://relaypay-dev-api-845745374775.us-central1.run.app
       - -t
       - us-central1-docker.pkg.dev/voiceagentproject-494309/relaypay-dev-images/frontend:latest
       - .

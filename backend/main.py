@@ -11,11 +11,9 @@ from slowapi.middleware import SlowAPIMiddleware
 
 import config
 from db import init_db, get_pool
+from observability import configure_logging, ObservabilityMiddleware
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+configure_logging()
 logger = logging.getLogger(__name__)
 
 # ── Rate limiter — must be defined BEFORE routers are imported ────────────────
@@ -35,6 +33,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="RelayPay Support API", lifespan=lifespan)
+
+# ── Observability (must be outermost middleware) ──────────────────────────────
+app.add_middleware(ObservabilityMiddleware)
 
 # ── Rate limiting ─────────────────────────────────────────────────────────────
 app.state.limiter = limiter

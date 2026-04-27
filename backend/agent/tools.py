@@ -7,6 +7,7 @@ from agent.rag import retrieve
 from agent.notifier import notify_escalation
 from agent.calendar_service import check_availability, create_event
 from db import create_escalation
+from observability import log_event, get_session_id
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +27,15 @@ async def search_knowledge_base(ctx: RunContextWrapper[SupportContext], query: s
     Args:
         query: A specific search query to find relevant documentation.
     """
-    logger.info("Tool: search_knowledge_base | query=%r", query)
     docs = await retrieve(query)
 
     if not docs:
+        log_event("kb_search", query=query, hits=0, session_id=get_session_id())
         return "No relevant documentation found for this query."
+
+    top_score = docs[0]["relevance"] if docs else 0
+    log_event("kb_search", query=query, hits=len(docs), top_score=round(top_score, 3),
+              session_id=get_session_id())
 
     return "\n\n".join(
         f"[Source: {d['source']} | Relevance: {d['relevance']}]\n{d['text']}"
@@ -101,11 +106,6 @@ async def escalate_to_human(
         appointment_time: ISO 8601 datetime of the booked appointment.
         calendar_event_id: The Google Calendar event ID after booking.
     """
-    logger.info(
-        "Tool: escalate_to_human | customer=%s <%s> | category=%s | appointment=%s",
-        user_name, user_email, category, appointment_time,
-    )
-
     escalation_id = await create_escalation(
         user_name=user_name,
         user_email=user_email,
@@ -125,5 +125,13 @@ async def escalate_to_human(
         escalation_id=escalation_id,
     )
 
+    log_event(
+        "escalation",
+        escalation_id=escalation_id,
+        customer_email=user_email,
+        category=category,
+        has_appointment=appointment_time is not None,
+        session_id=get_session_id(),
+    )
     ctx.context.escalated = True
     return f"Escalation recorded (ID: {escalation_id}). Support team has been notified."

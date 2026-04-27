@@ -1,4 +1,5 @@
 import logging
+import time
 
 from openai import AsyncOpenAI
 from agents import Agent, Runner, OpenAIChatCompletionsModel, set_tracing_disabled
@@ -11,6 +12,7 @@ from agent.tools import (
     escalate_to_human,
 )
 from agent.prompts import CHAT_SYSTEM_PROMPT
+from observability import log_event, set_request_context
 import config
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,8 @@ async def run(
     user_email: str | None = None,
 ) -> dict:
     context = SupportContext(conversation_id=conversation_id, mode=mode)
+    # Propagate session_id into log context so every line in this run is tagged
+    set_request_context(request_id="", session_id=conversation_id or "")
 
     # Build a customer context block so the agent knows the user's details
     # upfront and won't ask for them again during escalation.
@@ -72,10 +76,18 @@ async def run(
             escalate_to_human,
         ],
     )
+    t0 = time.perf_counter()
     result = await Runner.run(agent, input=input_messages, context=context)
+    latency_ms = round((time.perf_counter() - t0) * 1000)
 
     route = "ESCALATE" if context.escalated else "ANSWER"
-    logger.info("Agent finished | route=%s | query=%r", route, query)
+    log_event(
+        "agent_turn",
+        route=route,
+        latency_ms=latency_ms,
+        session_id=conversation_id,
+        mode=mode,
+    )
 
     return {
         "route": route,

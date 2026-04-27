@@ -5,6 +5,7 @@ from main import limiter
 
 from agent import orchestrator
 from db import get_session_history, save_session_history, delete_session, log_conversation
+from observability import set_request_context
 
 router = APIRouter()
 
@@ -20,6 +21,7 @@ class ChatRequest(BaseModel):
 @limiter.limit("60/hour")
 async def chat(request: Request, req: ChatRequest):
     session_id = req.session_id or str(uuid.uuid4())
+    set_request_context(request_id="", session_id=session_id)
     history = await get_session_history(session_id)
 
     result = await orchestrator.run(

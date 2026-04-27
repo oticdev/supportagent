@@ -8,8 +8,8 @@ guardrails, escalation triggers, and tool instructions.
 from agent.prompts import CHAT_SYSTEM_PROMPT, VOICE_INSTRUCTIONS
 
 
-def _rendered_chat(support_email="support@relaypay.com"):
-    return CHAT_SYSTEM_PROMPT.format(support_email=support_email)
+def _rendered_chat(support_email="support@relaypay.com", customer_context=""):
+    return CHAT_SYSTEM_PROMPT.format(support_email=support_email, customer_context=customer_context)
 
 
 def _rendered_voice(support_email="support@relaypay.com"):

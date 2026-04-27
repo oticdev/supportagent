@@ -22,25 +22,13 @@ async def chat(request: Request, req: ChatRequest):
     session_id = req.session_id or str(uuid.uuid4())
     history = await get_session_history(session_id)
 
-    # On the first turn inject known user details so the agent greets by name
-    # and doesn't ask for info it already has.
-    if not history and (req.user_name or req.user_email):
-        parts = []
-        if req.user_name:
-            parts.append(f"Name: {req.user_name}")
-        if req.user_email:
-            parts.append(f"Email: {req.user_email}")
-        context_note = (
-            f"[Context: The customer's details are known — {', '.join(parts)}. "
-            "Greet them by first name. Do NOT ask for their name or email.]"
-        )
-        history = [{"role": "system", "content": context_note}]
-
     result = await orchestrator.run(
         query=req.message,
         conversation_history=history,
         conversation_id=session_id,
         mode="chat",
+        user_name=req.user_name,
+        user_email=req.user_email,
     )
 
     history.append({"role": "user", "content": req.message})

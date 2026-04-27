@@ -65,12 +65,12 @@ async def test_chat_preserves_provided_session_id(app_client):
     assert response.json()["session_id"] == session
 
 
-async def test_chat_injects_user_context_on_first_turn(app_client):
-    """User name/email should be prepended to history on the first turn."""
+async def test_chat_passes_user_context_to_orchestrator(app_client):
+    """User name/email should be forwarded to orchestrator.run as kwargs."""
     captured = {}
 
     async def fake_run(query, conversation_history=None, **kwargs):
-        captured["history"] = conversation_history
+        captured["kwargs"] = kwargs
         return MOCK_ANSWER
 
     with patch("routers.chat.orchestrator.run", fake_run), \
@@ -84,13 +84,10 @@ async def test_chat_injects_user_context_on_first_turn(app_client):
             "user_email": "alice@example.com",
         })
 
-    # The first history entry should be a system context note
-    history = captured["history"]
-    assert len(history) > 0
-    first = history[0]
-    assert first["role"] == "system"
-    assert "Alice" in first["content"]
-    assert "alice@example.com" in first["content"]
+    # Name and email should reach the orchestrator so it can inject them into
+    # the system prompt — not as a history message.
+    assert captured["kwargs"].get("user_name") == "Alice"
+    assert captured["kwargs"].get("user_email") == "alice@example.com"
 
 
 async def test_chat_escalate_route_is_returned(app_client):

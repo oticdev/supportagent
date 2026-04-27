@@ -23,9 +23,32 @@ async def run(
     conversation_history: list | None = None,
     conversation_id: str | None = None,
     mode: str = "chat",
+    user_name: str | None = None,
+    user_email: str | None = None,
 ) -> dict:
     context = SupportContext(conversation_id=conversation_id, mode=mode)
-    prompt = CHAT_SYSTEM_PROMPT.format(support_email=config.SUPPORT_EMAIL or "support@relaypay.com")
+
+    # Build a customer context block so the agent knows the user's details
+    # upfront and won't ask for them again during escalation.
+    if user_name or user_email:
+        parts = []
+        if user_name:
+            parts.append(f"Name: {user_name}")
+        if user_email:
+            parts.append(f"Email: {user_email}")
+        customer_context = (
+            f"\n\n## Customer details (already known — do not ask again)\n"
+            + "\n".join(f"- {p}" for p in parts)
+            + "\nAddress the customer by their first name and use these details "
+            "during the escalation sequence."
+        )
+    else:
+        customer_context = ""
+
+    prompt = CHAT_SYSTEM_PROMPT.format(
+        support_email=config.SUPPORT_EMAIL or "support@relaypay.com",
+        customer_context=customer_context,
+    )
 
     input_messages = []
     if conversation_history:

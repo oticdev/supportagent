@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      GCP_REGION: us-central1
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       ENVIRONMENT: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'dev' || github.ref_name == 'staging' && 'staging' || 'dev') }}
 
     defaults:
@@ -43,16 +45,17 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev --quiet
 
       - name: Build and push Docker image
         env:
-          VITE_API_URL: ${{ secrets[format('VITE_API_URL_{0}', env.ENVIRONMENT)] || secrets.VITE_API_URL }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: |
-          IMAGE="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/relaypay-${ENVIRONMENT}-images/frontend"
+          IMAGE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/relaypay-${ENVIRONMENT}-images/frontend"
           TAG="${{ github.sha }}"
 
           docker build \
+            --platform linux/amd64 \
             --build-arg VITE_API_URL="${VITE_API_URL}" \
             -t "${IMAGE}:${TAG}" \
             -t "${IMAGE}:latest" .
@@ -66,13 +69,13 @@ jobs:
         run: |
           gcloud run services update "relaypay-${ENVIRONMENT}-frontend" \
             --image="${IMAGE_URI}" \
-            --region="${{ secrets.GCP_REGION }}" \
-            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --region="${GCP_REGION}" \
+            --project="${GCP_PROJECT_ID}" \
             --quiet
 
       - name: Show service URL
         run: |
           gcloud run services describe "relaypay-${ENVIRONMENT}-frontend" \
-            --region="${{ secrets.GCP_REGION }}" \
-            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --region="${GCP_REGION}" \
+            --project="${GCP_PROJECT_ID}" \
             --format="value(status.url)"
